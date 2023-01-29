@@ -365,7 +365,6 @@ while run:
         bullets.draw(window)
         bullets.update()
         hits = sprite.groupcollide(skelet_enemy_group1, bullets, True, True)
-        hit = sprite.groupcollide(world.tile_list, bullets, True, True)
         draw_grid()
     display.update()
     
