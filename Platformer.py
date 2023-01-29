@@ -300,6 +300,9 @@ class Bullet(sprite.Sprite):
 
     def update(self):
         self.rect.x += self.speedy
+        for tile in world.tile_list:
+            if Rect.colliderect(self.rect, tile[1]):
+                self.kill()
         # убить, если он заходит за верхнюю часть экрана
         if self.rect.right < 0:
             self.kill()
@@ -365,7 +368,6 @@ while run:
         bullets.draw(window)
         bullets.update()
         hits = sprite.groupcollide(skelet_enemy_group1, bullets, True, True)
-        hit = sprite.groupcollide(world.tile_list, bullets, True, True)
         draw_grid()
     display.update()
     #Eto grupa a ne tupl
