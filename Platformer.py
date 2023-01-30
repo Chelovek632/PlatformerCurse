@@ -4,7 +4,7 @@ import pickle
 from os import path
 
 win_width = 1000
-win_height = 500
+win_height = 700
 window = display.set_mode((win_width, win_height))
 display.set_caption('Platformer')
 
@@ -31,10 +31,10 @@ mixer.music.play(-1)
 
 
 def reset_level(level):
-    player.reset(0,400)
+    player.reset(0,600)
     skelet_enemy_group1.empty()
-    skelet_enemy_group2.empty()
     exit_group.empty()  
+    bullets.empty()
     #load in level data and create world
     if path.exists(f'level{level}_data'):
         pickle_in = open(f'level{level}_data', 'rb')
@@ -74,6 +74,7 @@ class Button():
 class Player():
     def __init__(self, x, y):
         self.reset(x, y)
+        self.direction = 0
     def update(self, game_over):
         dx = 0
         dy = 0
@@ -83,7 +84,7 @@ class Player():
         #get keypresses
             keys = key.get_pressed()
             if keys[K_SPACE] and self.jumped == False and self.in_air == False:
-                self.vel_y = -15
+                self.vel_y = -17
                 self.jumped = True
             if keys[K_SPACE] == False:
                 self.jumped = False
@@ -193,13 +194,7 @@ class Player():
             img_left = transform.flip(img_right, True, False)
             self.image_right.append(img_right)
             self.image_left.append(img_left)
-            
-            # img_jump_right = image.load(f'jump{num}.png')
-            # img_jump_right = transform.scale(img_jump_right, (50,50))
-            # img_jump_left = transform.flip(img_jump_right, True, False)
-            # self.image_jump_right.append(img_jump_right)
-            # self.image_jump_left.append(img_jump_left) 
-            
+
         self.dead_image  = image.load('dead.png')
         #self.dead_image = transform.scale(dead_img,(50,50))
         self.image = self.image_right[self.index]
@@ -213,12 +208,40 @@ class Player():
         self.direction = 0
         self.in_air = True
         self.gun = 0
-        self.counter_gun = 60
+        self.counter_gun = 240
     def shoot(self):
         bullet = Bullet(self.rect.centerx, self.rect.top)
         bullets.add(bullet)
 
 
+class Bullet(sprite.Sprite):
+    def __init__(self, x, y):
+        sprite.Sprite.__init__(self)
+        img = image.load('sword.png')
+        self.image = transform.scale(img, (35,25))
+        self.rect = self.image.get_rect()
+        self.rect.top = y + 10
+        self.rect.left = x +10
+        self.rect.right = x
+        self.speedy = 10
+        self.direction = player.direction
+
+    def update(self):
+        self.rect.x += self.speedy
+        for tile in world.tile_list:
+            if Rect.colliderect(self.rect, tile[1]):
+                self.kill()
+        # убить, если он заходит за верхнюю часть экрана
+        if self.rect.right < 0:
+            self.kill()
+        if self.direction == -1:
+            self.speedy = -10
+            self.rect.right = self.rect.right
+            img = image.load('sword1.png')
+            self.image = transform.scale(img, (35,25))
+
+
+            
 class World():
     def __init__(self, data):
         self.tile_list = []
@@ -237,21 +260,18 @@ class World():
                     img_rect.y = row_count * size 
                     tile = (img, img_rect)
                     self.tile_list.append(tile)
-                if tile == 2:
-                    skelet_enemy1 = Enemy(col_count * size, row_count * size + 15)
-                    skelet_enemy_group1.add(skelet_enemy1)
                 if tile == 3:
-                    skelet_enemy2 = Enemy(col_count * size, row_count * size + 40)
-                    skelet_enemy_group2.add(skelet_enemy2)
-                if tile == 4:
-                    img = transform.scale(grass_png, (size, size))
+                    skelet_enemy1 = Enemy(col_count * size, row_count * size+ 10)
+                    skelet_enemy_group1.add(skelet_enemy1)
+                if tile == 2:
+                    img = transform.scale(grass_png, (size, size ))
                     img_rect = img.get_rect()
                     img_rect.x = col_count * size 
                     img_rect.y = row_count * size 
                     tile = (img, img_rect)
                     self.tile_list.append(tile)
-                if tile == 6:
-                    exit = Exit(col_count * size, row_count * size + 15)
+                if tile == 4:
+                    exit = Exit(col_count * size, row_count * size )
                     exit_group.add(exit)
                 col_count += 1
             row_count += 1
@@ -263,18 +283,57 @@ class World():
 class Enemy(sprite.Sprite):
     def __init__(self, x, y):
         sprite.Sprite.__init__(self)
-        self.image = image.load('enemy1.png')
+        self.image_right1 = []
+        self.image_left1 = []
+        
+        self.index1 = 0
+        for num1 in range(1, 5):
+            img_right = image.load(f'enemy{num1}.png')
+            img_right = transform.scale(img_right, (40,40))
+            img_left = transform.flip(img_right, True, False)
+            self.image_right1.append(img_right)
+            self.image_left1.append(img_left)
+        self.image = self.image_right1[self.index1]
+        
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.move_direction = 1
         self.move_counter = 0
+        
+        self.direction1 = 0
     def update(self):
+        walk_cooldown = 5
         self.rect.x += self.move_direction
+        
         self.move_counter += 1
-        if abs(self.move_counter) > 150:
+        self.counter1 = 0
+        
+        if abs(self.move_counter) > 100:
             self.move_direction *= -1
             self.move_counter *= -1
+            
+            
+            
+            #ПЫТАЮСЬ СДЕЛАТЬ АНИМАЦИЮ
+            if self.move_direction == -1:
+                self.direction1 = -1
+                self.index1 +=1
+            elif self.move_direction == 1:
+                self.direction = 1
+                self.index1 +=1
+            if self.direction1 > walk_cooldown:
+                self.direction1 = 0	
+                self.index1 += 1
+                if self.index1 >= len(self.image_right1):
+                    self.index1 = 0
+                if self.direction1== 1:
+                    self.image = self.image_right1[self.index1]
+                if self.direction1 == -1:
+                    self.image = self.image_left1[self.index1]
+                    
+                    
+                    
 class Exit(sprite.Sprite):
     def __init__(self, x, y):
         sprite.Sprite.__init__(self)
@@ -288,27 +347,9 @@ def draw_grid():
         draw.line(window, (255,255,255), (0, line * size), (win_width, line * size), 0)
         draw.line(window, (255,255,255), (line * size ,0), (line * size, win_height), 0)
         
-class Bullet(sprite.Sprite):
-    def __init__(self, x, y):
-        sprite.Sprite.__init__(self)
-        img = image.load('sword.png')
-        self.image = transform.scale(img, (35,25))
-        self.rect = self.image.get_rect()
-        self.rect.top = y + 10
-        self.rect.left = x +10
-        self.speedy = 10
 
-    def update(self):
-        self.rect.x += self.speedy
-        for tile in world.tile_list:
-            if Rect.colliderect(self.rect, tile[1]):
-                self.kill()
-        # убить, если он заходит за верхнюю часть экрана
-        if self.rect.right < 0:
-            self.kill()
-        #if sprite.spritecollide(bullets, )
 
-player = Player(0, 400)
+player = Player(0, 600)
 skelet_enemy_group1 = sprite.Group()
 skelet_enemy_group2 = sprite.Group()
 spike_group = sprite.Group()
@@ -356,13 +397,11 @@ while run:
                 if restart_button.draw():
                     level = 0
                     world_data = []
-                    reset_level(level)
+                    world = reset_level(level)
                     game_over = 0
         if game_over == 0:
             skelet_enemy_group1.update()
-            skelet_enemy_group2.update()
         skelet_enemy_group1.draw(window)
-        skelet_enemy_group2.draw(window)
         exit_group.draw(window)
         spike_group.draw(window)
         bullets.draw(window)
